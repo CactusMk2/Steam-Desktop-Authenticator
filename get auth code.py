@@ -1,9 +1,11 @@
 from steam.guard import SteamAuthenticator
+import steam
 import json
 from pyperclip import copy
 import os
 import binascii
 import colorama as clr
+import time
 clr.init()
 
 SECRETS_FOLDER = "secrets/"
@@ -66,9 +68,9 @@ if not secrets:
 
 	
 auth = SteamAuthenticator(secrets)
+auth.steam_time_offset = 30
 code = get_code(auth)
-
-
+print(steam.guard.generate_twofactor_code(ss))
 print("User: ",clr.Fore.CYAN+secrets.get("account_name",UNKNOWN_USER)+clr.Fore.RESET)
 print(f"\n2FA CODE: {clr.Fore.GREEN+code+clr.Fore.RESET}")
 copy(code)
