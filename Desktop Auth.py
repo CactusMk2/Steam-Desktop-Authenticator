@@ -7,7 +7,12 @@ from tkinter import ttk
 import tkinter as tk
 from datetime import datetime
 import time
+import asyncio
 
+print("starting tk")
+root = tk.Tk()
+
+#custom progress bar as a frame
 class Custombar(tk.Frame):
 	start_pos = 0
 	end_pos = 100
@@ -27,16 +32,17 @@ class Custombar(tk.Frame):
 		self.width = progress * self.one_percent
 		self.configure(width=self.width)
 
+
+
+#guard functions
 def exit_with_error(error_text):
-	print(clr.Fore.RED+error_text+clr.Fore.RESET)
+	print(error_text)
 	input("Hit enter to exit")
 	exit()
 
+
 def show_error(error_text):
-	print(clr.Fore.RED+error_text+clr.Fore.RESET)
-	input("Hit enter to continue")
-
-
+	print(error_text)
 
 def get_code(secrets):
 	auth = SteamAuthenticator(secrets)
@@ -44,7 +50,8 @@ def get_code(secrets):
 		code = auth.get_code()
 	except AttributeError as er:
 		user = auth.secrets.get("account_name",UNKNOWN_USER)
-		exit_with_error(f"Secrets file for {user} is corrupted: {er}")
+		show_error(f"Secrets file for {user} is corrupted: {er}")
+		return "ERROR"
 	except binascii.Error as er:
 		user = auth.secrets.get("account_name")
 		exit_with_error(f"Secrets file for {user} is corrupted: {er}")
@@ -52,83 +59,45 @@ def get_code(secrets):
 		return code
 
 
-
-def update_user_list(secrets_list, acc_combo=None, force=False):
-	global last_checked_userlist
+def update_user_list(secrets_list):
+	global user_list
 	user_list = []
 	for index, user_secret in enumerate(secrets_list):
-			user_list.append(user_secret.get("account_name",UNKNOWN_USER))
+		user_list.append(user_secret.get("account_name",UNKNOWN_USER))
+	return user_list
 
-	if force:
-		return user_list
-	elif time.time() > last_checked_userlist+INTERVAL:
-		acc_combo.configure(values=user_list)
+
 
 def get_code_by_username(acc_var, tfa_list, user_list):
 	username = acc_var.get()
 	index = user_list.index(username)
 	return tfa_list[index]
 
-def get_tfa_list(secrets_list):
+
+async def get_tfa_list(secrets_list):
+	global tfa_list
 	tfa_list = []
 	for secrets in secrets_list:
+		usern = secrets.get("account_name")
+		print(f"Getting tfa for {usern}")
 		code = get_code(secrets)
 		tfa_list.append(code)
-	return tfa_list
+
 
 def copy_code():
 	global code_var
 	code = code_var.get()
 	copy(code)
 
-
-	
-
+#guard vars and consts
 SECRETS_FOLDER = "secrets/"
 FILENAME = "secrets.json"
 secrets_list = []
+tfa_list = []
 last_update = 0
+user_list = ["----"]
 UNKNOWN_USER = "#UNKNOWN_USER"
 INTERVAL = 1
-
-
-
-
-
-if not os.path.isdir(SECRETS_FOLDER):
-	SECRETS_FOLDER = "./"
-for _, _, files in os.walk(SECRETS_FOLDER):
-	for file in files:
-		with open(SECRETS_FOLDER+file,"r") as f:
-			try:
-				secrets = json.loads(f.read())
-			except:
-				if file.split(".")[-1] == "json":
-					show_error(f"{file} skipped: file is corrupted")
-			else:
-				secrets_list.append(secrets)
-if not len(secrets_list):
-	exit_with_error("No secrets files found")
-
-print("looking for last update")
-tempauth = SteamAuthenticator(secrets_list[0])
-tempcode = tempauth.get_code()
-work = True
-while work:
-	for i in range(1,31):
-		tempauth.steam_time_offset = i
-		if tempcode != tempauth.get_code():
-			offset = 30 - i
-			last_update = int(time.time()) - offset
-			work = False
-			break
-
-
-print("Getting userlist")
-user_list = update_user_list(secrets_list,force=True)
-
-print("starting tk")
-root = tk.Tk()
 
 # sizes and outlines
 SIZEW = 300
@@ -158,6 +127,53 @@ EXITBTN="black"
 EXITBTN_BG="firebrick1"
 EXTBTN_ACT="black"
 EXTBTN_ACT_BG="tomato"
+
+# first time initializing guard
+
+#getting all secrets
+if not os.path.isdir(SECRETS_FOLDER):
+	SECRETS_FOLDER = "./"
+index = 0
+print("looking for secrets, getting files")
+for _, dirs, files in os.walk(SECRETS_FOLDER):
+	for file in files:
+		print(f"FILE - {file}")
+		with open(SECRETS_FOLDER+file,"r") as f:
+			try:
+				secrets = json.loads(f.read())
+			except:
+				pass
+			else:
+				if secrets.get("shared_secret", False):
+					secrets_list.append(secrets)
+				else:
+					user = secrets.get("account_name", False)
+					if user:
+						show_error(f"Secrets file for {user} is corrupted: no shared_secret key")
+				
+	break
+if not len(secrets_list):
+	exit_with_error("No secrets files found")
+
+#getting when was last update
+print("looking for last update")
+tempauth = SteamAuthenticator(secrets_list[0])
+tempcode = tempauth.get_code()
+work = True
+while work:
+	for i in range(1,30):
+		tempauth.steam_time_offset = i
+		if tempcode != tempauth.get_code():
+			offset = 30 - i
+			last_update = int(time.time()) - offset
+			work = False
+			break
+	else:
+		last_update = int(time.time())
+		work = False
+		break
+
+
 
 #main window configuration
 root.geometry(f"{SIZEW}x{SIZEH}-{POSW}-{POSH}")
@@ -292,44 +308,49 @@ copy_btn_frame.pack(side="top")
 copy_btn.place(anchor="center", rely=0.46, relx=0.5)
 acc_frame.pack(side="top")
 acc_lbl.place(relx=0, rely=0.5, anchor="w")
-acc_combo.place(relx=1, rely=0.5, anchor="e",)
+acc_combo.place(relx=1, rely=0.5, anchor="e", height=30)
 exit_btn.place(anchor="center", width=300, height=30, relx = 0.5, rely=0.97)
 
 progressbar.set_positions(0, 260, 0)
 progressbar.set_progress(100)
 
-tfa_list = []
 
 # custom mainloop
-def apploop():
-	global last_checked_userlist
+async def apploop(loop):
 	global last_update
 	global tfa_list
+	global user_list
 	root.update()
-	print("Getting tfa list")
-	tfa_list = get_tfa_list(secrets_list)
+	await get_tfa_list(secrets_list)
+	print("Updating userlist")
+	user_list = update_user_list(secrets_list)
+	acc_combo.configure(values=user_list)
+	acc_var.set(user_list[0])
 	while True:
-		try:
-			root.update()
-		except tk.TclError:
-			exit()
+		task = loop.create_task(updater())
 		progresstime = time.time() - last_update
 		progress = progresstime // 0.3
 		try:
 			progressbar.set_progress(100-progress)
 		except tk.TclError:
 			pass
-		if progresstime > 31:
+		if progresstime > 30:
 			last_update = time.time()
-			tfa_list = get_tfa_list(secrets_list)
+			loop.create_task(get_tfa_list(secrets_list))
 		code = get_code_by_username(acc_var, tfa_list, user_list)
 		code_var.set(code)
+		await task
 
-		# try: update_user_list(secrets_list, acc_combo)
-		# except: pass
+async def updater():
+	try:
+		root.update()
+	except tk.TclError:
+		exit()
 
-print("mainloop")
-last_checked_userlist = 0
+
 code_var.set("-----")
 
-apploop()
+loop = asyncio.get_event_loop()
+loop.run_until_complete(apploop(loop))
+
+
