@@ -326,6 +326,7 @@ async def apploop(loop):
 	user_list = update_user_list(secrets_list)
 	acc_combo.configure(values=user_list)
 	acc_var.set(user_list[0])
+	
 	while True:
 		task = loop.create_task(updater())
 		progresstime = time.time() - last_update
