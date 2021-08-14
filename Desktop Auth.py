@@ -7,7 +7,8 @@ from tkinter import ttk
 import tkinter as tk
 from datetime import datetime
 import time
-import asyncio
+import threading
+from win10toast import ToastNotifier
 
 print("starting tk")
 root = tk.Tk()
@@ -36,16 +37,19 @@ class Custombar(tk.Frame):
 
 #guard functions
 def exit_with_error(error_text):
-	print(error_text)
-	input("Hit enter to exit")
+	toast = ToastNotifier()
+	toast.show_toast("Fatal Error", error_text, duration=3)
 	exit()
 
 
 def show_error(error_text):
-	print(error_text)
+	toast = ToastNotifier()
+	toast.show_toast("Warning", error_text, duration=5, threaded=True)
 
-def get_code(secrets):
+def get_code(secrets, offset=0):
 	auth = SteamAuthenticator(secrets)
+	if offset:
+		auth.steam_time_offset = offset
 	try:
 		code = auth.get_code()
 	except AttributeError as er:
@@ -74,7 +78,7 @@ def get_code_by_username(acc_var, tfa_list, user_list):
 	return tfa_list[index]
 
 
-async def get_tfa_list(secrets_list):
+def get_tfa_list(secrets_list):
 	global tfa_list
 	tfa_list = []
 	for secrets in secrets_list:
@@ -127,52 +131,6 @@ EXITBTN="black"
 EXITBTN_BG="firebrick1"
 EXTBTN_ACT="black"
 EXTBTN_ACT_BG="tomato"
-
-# first time initializing guard
-
-#getting all secrets
-if not os.path.isdir(SECRETS_FOLDER):
-	SECRETS_FOLDER = "./"
-index = 0
-print("looking for secrets, getting files")
-for _, dirs, files in os.walk(SECRETS_FOLDER):
-	for file in files:
-		print(f"FILE - {file}")
-		with open(SECRETS_FOLDER+file,"r") as f:
-			try:
-				secrets = json.loads(f.read())
-			except:
-				pass
-			else:
-				if secrets.get("shared_secret", False):
-					secrets_list.append(secrets)
-				else:
-					user = secrets.get("account_name", False)
-					if user:
-						show_error(f"Secrets file for {user} is corrupted: no shared_secret key")
-				
-	break
-if not len(secrets_list):
-	exit_with_error("No secrets files found")
-
-#getting when was last update
-print("looking for last update")
-tempauth = SteamAuthenticator(secrets_list[0])
-tempcode = tempauth.get_code()
-work = True
-while work:
-	for i in range(1,30):
-		tempauth.steam_time_offset = i
-		if tempcode != tempauth.get_code():
-			offset = 30 - i
-			last_update = int(time.time()) - offset
-			work = False
-			break
-	else:
-		last_update = int(time.time())
-		work = False
-		break
-
 
 
 #main window configuration
@@ -248,6 +206,7 @@ code_entry = tk.Entry(
 	selectforeground=CODELABEL
 	)
 code_entry.configure(state="readonly")
+code_var.set("Loading")
 
 acc_lbl = tk.Label(
 	acc_frame,
@@ -260,9 +219,11 @@ acc_var = tk.StringVar()
 acc_combo = ttk.Combobox(
 	acc_frame,
 	textvariable=acc_var,
-	state="readonly",
-	values=user_list)
+	state="readonly")
+
+acc_combo.configure(values="Loading")
 acc_combo.current(0)
+
 
 progressbar = Custombar(
 	progressbar_frame,
@@ -314,44 +275,112 @@ exit_btn.place(anchor="center", width=300, height=30, relx = 0.5, rely=0.97)
 progressbar.set_positions(0, 260, 0)
 progressbar.set_progress(100)
 
+root.update()
+
+
+
+
+# first time initializing guard
+
+#getting all secrets
+if not os.path.isdir(SECRETS_FOLDER):
+	SECRETS_FOLDER = "./"
+index = 0
+print("looking for secrets, getting files")
+for _, dirs, files in os.walk(SECRETS_FOLDER):
+	for file in files:
+		print(f"FILE - {file}")
+		with open(SECRETS_FOLDER+file,"r") as f:
+			try:
+				secrets = json.loads(f.read())
+			except:
+				pass
+			else:
+				if secrets.get("shared_secret", False):
+					secrets_list.append(secrets)
+				else:
+					user = secrets.get("account_name", False)
+					if user:
+						show_error(f"Secrets file for {user} is corrupted: no shared_secret key")
+				
+	break
+if not len(secrets_list):
+	exit_with_error("No secrets files found")
+
+#getting when was last update
+print("looking for last update")
+tempauth = SteamAuthenticator(secrets_list[0])
+tempcode = tempauth.get_code()
+work = True
+while work:
+	for i in range(1,30):
+		tempauth.steam_time_offset = i
+		if tempcode != tempauth.get_code():
+			offset = 30 - i
+			last_update = int(time.time()) - offset
+			work = False
+			break
+	else:
+		last_update = int(time.time())
+		work = False
+		break
+
+
+
 
 # custom mainloop
-async def apploop(loop):
+def updater():
 	global last_update
-	global tfa_list
-	global user_list
-	root.update()
-	await get_tfa_list(secrets_list)
-	print("Updating userlist")
-	user_list = update_user_list(secrets_list)
-	acc_combo.configure(values=user_list)
-	acc_var.set(user_list[0])
-	
-	while True:
-		task = loop.create_task(updater())
+	global progresstime
+	global progress
+	while getattr(loop, "do_run", True):
 		progresstime = time.time() - last_update
 		progress = progresstime // 0.3
+
+		if progresstime > 30:
+			loop.updating = True
+			last_update = time.time()
+			get_tfa_list(secrets_list)
+			loop.updating = False
+		
+
+	
+
+
+
+
+get_tfa_list(secrets_list)
+print("Updating userlist")
+user_list = update_user_list(secrets_list)
+acc_combo.configure(values=user_list)
+acc_var.set(user_list[0])
+
+loop = threading.Thread(target=updater)
+loop.do_run = True
+loop.updating = False
+loop.start()
+
+last_loop_update = 0
+loop_interval = 0.5
+while True:
+	if time.time() >= last_loop_update + loop_interval:
+		last_loop_update = time.time()
+		if not loop.updating:
+			code = get_code_by_username(acc_var, tfa_list, user_list)
+			code_var.set(code)
+		else:
+			code_var.set("Updating")
+		
+		username = acc_var.get()
 		try:
 			progressbar.set_progress(100-progress)
 		except tk.TclError:
 			pass
-		if progresstime > 30:
-			last_update = time.time()
-			loop.create_task(get_tfa_list(secrets_list))
-		code = get_code_by_username(acc_var, tfa_list, user_list)
-		code_var.set(code)
-		await task
 
-async def updater():
 	try:
 		root.update()
 	except tk.TclError:
+		loop.do_run = False
 		exit()
-
-
-code_var.set("-----")
-
-loop = asyncio.get_event_loop()
-loop.run_until_complete(apploop(loop))
-
+		
 
