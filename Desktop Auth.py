@@ -10,9 +10,6 @@ import time
 import threading
 from win10toast import ToastNotifier
 
-print("starting tk")
-root = tk.Tk()
-
 #custom progress bar as a frame
 class Custombar(tk.Frame):
 	start_pos = 0
@@ -89,9 +86,11 @@ def get_tfa_list(secrets_list):
 
 
 def copy_code():
-	global code_var
-	code = code_var.get()
+	global code
 	copy(code)
+
+print("starting tk")
+root = tk.Tk()
 
 #guard vars and consts
 SECRETS_FOLDER = "secrets/"
@@ -119,7 +118,13 @@ MAINFRAME_BG = "gray14"
 UPLABEL = "deep sky blue"
 CODEFRAME_BG = "gray8"
 CODELABEL = "green1"
+CODELABEL_CRIT = "orange red"
+CODELABEL_UPD = "deep sky blue"
+CODELABEL_WARN = "yellow2"
 PROGRESSBAR_BG = "green1"
+PROGRESSBAR_CRT_BG = "red2"
+PROGRESSBAR_WARN_BG = "yellow"
+PROGRESSBAR_UPD_BG = "deep sky blue"
 SELECTED_CODE = "forest green"
 CUR_BG = "white"
 COPY_BUTTON_BG = "gray28"
@@ -135,12 +140,13 @@ EXTBTN_ACT_BG="tomato"
 
 #main window configuration
 root.geometry(f"{SIZEW}x{SIZEH}-{POSW}-{POSH}")
-root.overrideredirect(True)
+root.overrideredirect(False)
 root.resizable(False, False)
 root.attributes(
 	'-topmost', 1,
 	'-alpha',ALPHA,)
 root.configure(bg=OUTLINE_BG)
+root.title("Desktop Authenticator")
 
 
 # creating frames
@@ -192,6 +198,8 @@ up_label = tk.Label(
 	font=("Arial", 16),)
 
 code_var = tk.StringVar()
+code_var.set("Loading")
+
 code_entry = tk.Entry(
 	mainframe,
 	readonlybackground=CODEFRAME_BG,
@@ -206,7 +214,7 @@ code_entry = tk.Entry(
 	selectforeground=CODELABEL
 	)
 code_entry.configure(state="readonly")
-code_var.set("Loading")
+
 
 acc_lbl = tk.Label(
 	acc_frame,
@@ -360,22 +368,40 @@ loop.do_run = True
 loop.updating = False
 loop.start()
 
-last_loop_update = 0
-loop_interval = 0.5
+
 while True:
-	if time.time() >= last_loop_update + loop_interval:
-		last_loop_update = time.time()
-		if not loop.updating:
-			code = get_code_by_username(acc_var, tfa_list, user_list)
-			code_var.set(code)
-		else:
-			code_var.set("Updating")
+	if not loop.updating:
+		code = get_code_by_username(acc_var, tfa_list, user_list)
+		code_var.set(code)
+		progress_forbar = 100 - progress
+	else:
+		progress_forbar = 100
+		code = "-----"
+		code_var.set("Updating")
+
+	try:
+		progressbar.set_progress(progress_forbar)
+	except tk.TclError:
+		pass
 		
-		username = acc_var.get()
-		try:
-			progressbar.set_progress(100-progress)
-		except tk.TclError:
-			pass
+	username = acc_var.get()
+	try:
+		if loop.updating:
+				code_entry.configure(fg=CODELABEL_UPD)
+				progressbar.configure(bg=PROGRESSBAR_UPD_BG)
+		elif progress > 80:		
+			code_entry.configure(fg=CODELABEL_CRIT)
+			progressbar.configure(bg=PROGRESSBAR_CRT_BG)
+		elif progress > 65:
+			code_entry.configure(fg=CODELABEL_WARN)
+			progressbar.configure(bg=PROGRESSBAR_WARN_BG)
+		else:
+			progressbar.configure(bg=PROGRESSBAR_BG)
+			code_entry.configure(fg=CODELABEL)
+		progressbar.set_progress(100-progress)
+
+	except tk.TclError:
+		pass
 
 	try:
 		root.update()
