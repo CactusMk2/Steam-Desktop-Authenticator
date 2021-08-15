@@ -59,18 +59,16 @@ if not len(secrets_list):
 
 show_users(secrets_list)
 
-try: user_index = int(input("\nChoose number: ")) - 1
-except:
-	exit()
-secrets = secrets_list[user_index]
+# try: user_index = int(input("\nChoose number: ")) - 1
+# except:
+# 	exit()
+secrets = secrets_list[1]
 if not secrets:
 	exit_with_error("Secrets for specified user wasn't found")
 
 	
 auth = SteamAuthenticator(secrets)
-auth.steam_time_offset = 30
 code = get_code(auth)
-print(steam.guard.generate_twofactor_code(ss))
 print("User: ",clr.Fore.CYAN+secrets.get("account_name",UNKNOWN_USER)+clr.Fore.RESET)
 print(f"\n2FA CODE: {clr.Fore.GREEN+code+clr.Fore.RESET}")
 copy(code)

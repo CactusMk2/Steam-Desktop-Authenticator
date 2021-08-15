@@ -9,6 +9,9 @@ from datetime import datetime
 import time
 import threading
 from win10toast import ToastNotifier
+from random import randint
+
+debug_mode = False
 
 #custom progress bar as a frame
 class Custombar(tk.Frame):
@@ -44,6 +47,9 @@ def show_error(error_text):
 	toast.show_toast("Warning", error_text, duration=5, threaded=True)
 
 def get_code(secrets, offset=0):
+	if debug_mode:
+		time.sleep(0.5)
+		return randint(10000,99999)
 	auth = SteamAuthenticator(secrets)
 	if offset:
 		auth.steam_time_offset = offset
@@ -58,6 +64,7 @@ def get_code(secrets, offset=0):
 		exit_with_error(f"Secrets file for {user} is corrupted: {er}")
 	else:
 		return code
+	
 
 
 def update_user_list(secrets_list):
@@ -316,22 +323,27 @@ if not len(secrets_list):
 	exit_with_error("No secrets files found")
 
 #getting when was last update
-print("looking for last update")
-tempauth = SteamAuthenticator(secrets_list[0])
-tempcode = tempauth.get_code()
-work = True
-while work:
-	for i in range(1,30):
-		tempauth.steam_time_offset = i
-		if tempcode != tempauth.get_code():
-			offset = 30 - i
-			last_update = int(time.time()) - offset
+if debug_mode:
+	last_update = int(time.time()) - 25
+else:
+	print("looking for last update")
+	tempauth = SteamAuthenticator(secrets_list[0])
+	tempcode = tempauth.get_code()
+	work = True
+	while work:
+		for i in range(1,30):
+			tempauth.steam_time_offset = i
+			if tempcode != tempauth.get_code():
+				offset = 30 - i
+				last_update = int(time.time()) - offset
+				work = False
+				break
+		else:
+			last_update = int(time.time())
 			work = False
 			break
-	else:
-		last_update = int(time.time())
-		work = False
-		break
+
+
 
 
 
@@ -339,23 +351,28 @@ while work:
 # custom mainloop
 def updater():
 	global last_update
-	global progresstime
 	global progress
+	global progresstime
 	while getattr(loop, "do_run", True):
-		progresstime = time.time() - last_update
-		progress = progresstime // 0.3
+		loop_now = int(time.time())
+		if not (loop_now + 1) - last_update > 30:
+			time.sleep(1)
 
-		if progresstime > 30:
+		if progresstime > 29:
 			loop.updating = True
-			last_update = time.time()
+			last_update = loop_now
 			get_tfa_list(secrets_list)
+			progress = 0
 			loop.updating = False
+		pass
+	pass
 		
 
 	
 
 
-
+progresstime = time.time() - last_update
+progress = progresstime // 0.3
 
 get_tfa_list(secrets_list)
 print("Updating userlist")
@@ -370,6 +387,9 @@ loop.start()
 
 
 while True:
+	progresstime = time.time() - last_update
+	progress = progresstime // 0.3
+
 	if not loop.updating:
 		code = get_code_by_username(acc_var, tfa_list, user_list)
 		code_var.set(code)
@@ -379,10 +399,6 @@ while True:
 		code = "-----"
 		code_var.set("Updating")
 
-	try:
-		progressbar.set_progress(progress_forbar)
-	except tk.TclError:
-		pass
 		
 	username = acc_var.get()
 	try:
@@ -398,7 +414,8 @@ while True:
 		else:
 			progressbar.configure(bg=PROGRESSBAR_BG)
 			code_entry.configure(fg=CODELABEL)
-		progressbar.set_progress(100-progress)
+
+		progressbar.set_progress(progress_forbar)
 
 	except tk.TclError:
 		pass
