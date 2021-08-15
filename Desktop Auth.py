@@ -11,7 +11,7 @@ import threading
 from win10toast import ToastNotifier
 from random import randint
 
-debug_mode = False
+debug_mode = True
 
 #custom progress bar as a frame
 class Custombar(tk.Frame):
