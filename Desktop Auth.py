@@ -1,4 +1,7 @@
+from config import *
+log.debug("Importing SteamAuthenticator")
 from steam.guard import SteamAuthenticator
+log.debug("Importing other libraries")
 import json
 from pyperclip import copy
 import os
@@ -10,8 +13,10 @@ import time
 import threading
 from win10toast import ToastNotifier
 from random import randint
+import logging
 
-debug_mode = True
+if debug_mode:
+	log.info("Engaged debug mode!")
 
 #custom progress bar as a frame
 class Custombar(tk.Frame):
@@ -37,19 +42,22 @@ class Custombar(tk.Frame):
 
 #guard functions
 def exit_with_error(error_text):
+	log.critical(error_text)
 	toast = ToastNotifier()
 	toast.show_toast("Fatal Error", error_text, duration=3)
 	exit()
 
 
 def show_error(error_text):
-	toast = ToastNotifier()
-	toast.show_toast("Warning", error_text, duration=5, threaded=True)
+	log.warning(error_text)
 
 def get_code(secrets, offset=0):
 	if debug_mode:
-		time.sleep(0.5)
-		return randint(10000,99999)
+		code = randint(10000,99999)
+		log.debug(f"sleeping {debug_sleep_time}")
+		time.sleep(debug_sleep_time)
+		log.debug(f"returning {code}")
+		return code
 	auth = SteamAuthenticator(secrets)
 	if offset:
 		auth.steam_time_offset = offset
@@ -87,7 +95,7 @@ def get_tfa_list(secrets_list):
 	tfa_list = []
 	for secrets in secrets_list:
 		usern = secrets.get("account_name")
-		print(f"Getting tfa for {usern}")
+		log.info(f"Getting tfa for {usern}")
 		code = get_code(secrets)
 		tfa_list.append(code)
 
@@ -96,54 +104,15 @@ def copy_code():
 	global code
 	copy(code)
 
-print("starting tk")
+log.debug("starting tk")
 root = tk.Tk()
 
-#guard vars and consts
-SECRETS_FOLDER = "secrets/"
-FILENAME = "secrets.json"
-secrets_list = []
-tfa_list = []
-last_update = 0
-user_list = ["----"]
-UNKNOWN_USER = "#UNKNOWN_USER"
-INTERVAL = 1
 
-# sizes and outlines
-SIZEW = 300
-SIZEH = 350
-ALPHA = 0.95
-MF_LOC = 0.01
+# sizes
 W = root.winfo_screenwidth() // 2
 H = root.winfo_screenheight() // 2
 POSW = W-(SIZEW//2)
 POSH = H-(SIZEH//2)
-
-# colors
-OUTLINE_BG = "slate gray"
-MAINFRAME_BG = "gray14"
-UPLABEL = "deep sky blue"
-CODEFRAME_BG = "gray8"
-CODELABEL = "green1"
-CODELABEL_CRIT = "orange red"
-CODELABEL_UPD = "deep sky blue"
-CODELABEL_WARN = "yellow2"
-PROGRESSBAR_BG = "green1"
-PROGRESSBAR_CRT_BG = "red2"
-PROGRESSBAR_WARN_BG = "yellow"
-PROGRESSBAR_UPD_BG = "deep sky blue"
-SELECTED_CODE = "forest green"
-CUR_BG = "white"
-COPY_BUTTON_BG = "gray28"
-COPY_BUTTON = "deep sky blue"
-COPY_BUTTON_ACTIVE_BG="gray40"
-COPY_BUTTON_ACTIVE="cyan2"
-ACC_LBL = "deep sky blue"
-EXITBTN="black"
-EXITBTN_BG="firebrick1"
-EXTBTN_ACT="black"
-EXTBTN_ACT_BG="tomato"
-
 
 #main window configuration
 root.geometry(f"{SIZEW}x{SIZEH}-{POSW}-{POSH}")
@@ -301,10 +270,10 @@ root.update()
 if not os.path.isdir(SECRETS_FOLDER):
 	SECRETS_FOLDER = "./"
 index = 0
-print("looking for secrets, getting files")
+log.debug("looking for secrets, getting files")
 for _, dirs, files in os.walk(SECRETS_FOLDER):
 	for file in files:
-		print(f"FILE - {file}")
+		log.debug(f"FILE - {file}")
 		with open(SECRETS_FOLDER+file,"r") as f:
 			try:
 				secrets = json.loads(f.read())
@@ -320,28 +289,32 @@ for _, dirs, files in os.walk(SECRETS_FOLDER):
 				
 	break
 if not len(secrets_list):
+	code_entry.configure(fg=CODELABEL_CRIT)
+	code_var.set("ERROR")
+	progressbar.configure(bg=PROGRESSBAR_CRT_BG)
+	root.update()
 	exit_with_error("No secrets files found")
 
 #getting when was last update
-if debug_mode:
-	last_update = int(time.time()) - 25
-else:
-	print("looking for last update")
-	tempauth = SteamAuthenticator(secrets_list[0])
-	tempcode = tempauth.get_code()
-	work = True
-	while work:
-		for i in range(1,30):
-			tempauth.steam_time_offset = i
-			if tempcode != tempauth.get_code():
-				offset = 30 - i
-				last_update = int(time.time()) - offset
-				work = False
-				break
-		else:
-			last_update = int(time.time())
+log.debug("looking for last update")
+tempcode = get_code(secrets_list[0])
+work = True
+while work:
+	for i in range(1,30):
+		# tempauth.steam_time_offset = i
+		if tempcode != get_code(secrets_list[0], offset=i):
+			offset = 30 - i
+			last_update = int(time.time()) - offset
 			work = False
 			break
+	else:
+		log.info("Exit")
+		last_update = int(time.time())
+		work = False
+		break
+
+if debug_mode:
+	last_update = int(time.time()) - debug_offset
 
 
 
@@ -375,7 +348,7 @@ progresstime = time.time() - last_update
 progress = progresstime // 0.3
 
 get_tfa_list(secrets_list)
-print("Updating userlist")
+log.debug("Updating userlist")
 user_list = update_user_list(secrets_list)
 acc_combo.configure(values=user_list)
 acc_var.set(user_list[0])
@@ -402,9 +375,10 @@ while True:
 		
 	username = acc_var.get()
 	try:
+		root.update()
 		if loop.updating:
-				code_entry.configure(fg=CODELABEL_UPD)
-				progressbar.configure(bg=PROGRESSBAR_UPD_BG)
+			code_entry.configure(fg=CODELABEL_UPD)
+			progressbar.configure(bg=PROGRESSBAR_UPD_BG)
 		elif progress > 80:		
 			code_entry.configure(fg=CODELABEL_CRIT)
 			progressbar.configure(bg=PROGRESSBAR_CRT_BG)
@@ -416,14 +390,10 @@ while True:
 			code_entry.configure(fg=CODELABEL)
 
 		progressbar.set_progress(progress_forbar)
-
-	except tk.TclError:
-		pass
-
-	try:
-		root.update()
+		
 	except tk.TclError:
 		loop.do_run = False
 		exit()
+		
 		
 
