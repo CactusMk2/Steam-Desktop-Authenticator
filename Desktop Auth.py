@@ -39,6 +39,18 @@ class Custombar(tk.Frame):
 		self.configure(width=self.width)
 
 
+class Setup_account(tk.Toplevel):
+	def __init__(self, parent):
+		super().__init__(parent)
+		self.label = tk.Label(self, text="some crap")
+		self.button = tk.Button(self, text=u"\u274C", command=self.destroy)
+		self.label.pack(padx=20, pady=20)
+		self.button.pack(pady=5, ipadx=2, ipady=2)
+
+def open_setup():
+	setup = Setup_account(root)
+	setup.grab_set()
+
 
 #guard functions
 def exit_with_error(error_text):
@@ -159,7 +171,14 @@ acc_frame = tk.Frame(
 	width=240,
 	height=43,
 	bg=MAINFRAME_BG)
-# end
+
+setup_frame = tk.Frame(
+	mainframe,
+	relief=tk.FLAT,
+	width=240,
+	height=43,
+	bg="white"
+	)
 
 
 # creating widgets
@@ -236,7 +255,20 @@ exit_btn = tk.Button(
 	fg=EXITBTN,
 	activebackground=EXTBTN_ACT_BG,
 	activeforeground=EXTBTN_ACT,
-	command=root.destroy
+	command=root.destroy)
+
+setup_btn = tk.Button(
+	setup_frame,
+	relief=tk.FLAT,
+	text="Add new account",
+	width=260,
+	height=10,
+	bg=COPY_BUTTON_BG,
+	fg=COPY_BUTTON,
+	activebackground=COPY_BUTTON_ACTIVE_BG,
+	activeforeground=COPY_BUTTON_ACTIVE,
+	font=("Impact", 20),
+	command=open_setup
 	)
 
 
@@ -252,6 +284,9 @@ copy_btn.place(anchor="center", rely=0.46, relx=0.5)
 acc_frame.pack(side="top")
 acc_lbl.place(relx=0, rely=0.5, anchor="w")
 acc_combo.place(relx=1, rely=0.5, anchor="e", height=30)
+setup_frame.pack(side="top")
+setup_btn.place(width=260,anchor="w",rely=0.5)
+
 exit_btn.place(anchor="center", width=300, height=30, relx = 0.5, rely=0.97)
 
 progressbar.set_positions(0, 260, 0)
@@ -301,7 +336,7 @@ while work:
 	for i in range(1,30):
 		# tempauth.steam_time_offset = i
 		if tempcode != get_code(secrets_list[0], offset=i):
-			offset = 30 - i
+			offset = 30 - (i+1)
 			last_update = int(time.time()) - offset
 			work = False
 			break
