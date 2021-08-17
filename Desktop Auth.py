@@ -13,7 +13,7 @@ import time
 import threading
 from win10toast import ToastNotifier
 from random import randint
-import logging
+root = tk.Tk()
 
 if debug_mode:
 	log.info("Engaged debug mode!")
@@ -58,6 +58,7 @@ def get_code(secrets, offset=0):
 		time.sleep(debug_sleep_time)
 		log.debug(f"returning {code}")
 		return code
+
 	auth = SteamAuthenticator(secrets)
 	if offset:
 		auth.steam_time_offset = offset
@@ -103,9 +104,6 @@ def get_tfa_list(secrets_list):
 def copy_code():
 	global code
 	copy(code)
-
-log.debug("starting tk")
-root = tk.Tk()
 
 
 # sizes
