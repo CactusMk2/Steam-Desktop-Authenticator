@@ -1,4 +1,6 @@
 from config import *
+log.debug("Importing SteamClient")
+from steam.client import SteamClient
 log.debug("Importing SteamAuthenticator")
 from steam.guard import SteamAuthenticator
 log.debug("Importing other libraries")
@@ -40,14 +42,171 @@ class Custombar(tk.Frame):
 
 
 class Setup_account(tk.Toplevel):
+	login_var = "None"
+	password_var = "None"
+	tfa_var = "None"
+	is_up = True
+	tfa_entry = None
+	tfa_up_label = None
+	setup_account_btn = None
+	def on_closing(self):
+		self.is_up = False
+		self.destroy()
 	def __init__(self, parent):
 		super().__init__(parent)
-		self.label = tk.Label(self, text="some crap")
-		self.button = tk.Button(self, text=u"\u274C", command=self.destroy)
-		self.label.pack(padx=20, pady=20)
-		self.button.pack(pady=5, ipadx=2, ipady=2)
+		self.geometry(f"{SIZEW}x{SIZEH}-{POSW-SIZEW}-{POSH}")
+		self.resizable(False, False)
+		self.attributes(
+			# '-topmost', 1,
+			'-alpha', ALPHA,
+			'-toolwindow', True)
+		self.configure(bg=OUTLINE_BG)
+		self.protocol("WM_DELETE_WINDOW", self.on_closing)
+		self.is_up = True
+
+		#frames
+		setup_mainframe = tk.Frame(
+			self,
+			relief=tk.FLAT,
+			bg=MAINFRAME_BG)
+		setup_mainframe.place(relx=MF_LOC, rely=MF_LOC, relwidth=0.98, relheight=0.98
+			)
+
+		login_frame = tk.Frame(
+			setup_mainframe,
+			relief=tk.FLAT,
+			width=275,
+			height=120,
+			bg=MAINFRAME_BG
+			)
+
+		tfa_frame = tk.Frame(
+			setup_mainframe,
+			relief=tk.FLAT,
+			width=275,
+			height=120,
+			bg=MAINFRAME_BG
+			)
+
+		#widgets
+		setup_up_label = tk.Label(
+			setup_mainframe,
+			text="Setup new account",
+			bg=MAINFRAME_BG,
+			fg=UPLABEL,
+			font=("Arial", 16)
+			)
+
+		self.login_var = tk.StringVar()
+		login_entry = tk.Entry(
+			login_frame,
+			relief=tk.FLAT,
+			textvariable=self.login_var,
+			bg=LOGIN_BG,
+			fg=LOGIN,
+			justify="left",
+			width=275,
+			font=("Impact", 20),
+			selectbackground=SELECTED_LOGIN,
+			selectforeground=LOGIN
+			)
+
+		self.password_var = tk.StringVar()
+		password_entry = tk.Entry(
+			login_frame,
+			relief=tk.FLAT,
+			textvariable=self.password_var,
+			bg=LOGIN_BG,
+			fg=LOGIN,
+			justify="left",
+			width=275,
+			font=("Impact", 20),
+			selectbackground=SELECTED_LOGIN,
+			selectforeground=LOGIN
+			)
+
+
+		self.setup_account_btn = tk.Button(
+			setup_mainframe,
+			relief=tk.FLAT,
+			text="Setup new account",
+			bg=SETUP_BTN_BG,
+			fg=SETUP_BTN,
+			activebackground=SETUP_BTN_ACTIVE_BG,
+			activeforeground=SETUP_BTN_ACTIVE,
+			font = ("Impact", 22),
+			command=add_account
+			)
+
+		self.tfa_up_label = tk.Label(
+			tfa_frame,
+			text="Enter 2FA or email code",
+			bg=MAINFRAME_BG,
+			fg=UPLABEL,
+			font=("Arial", 16)
+			)
+
+		self.tfa_var = tk.StringVar()
+		self.tfa_entry = tk.Entry(
+			tfa_frame,
+			relief=tk.FLAT,
+			textvariable=self.tfa_var,
+			bg="black",
+			fg=CODELABEL,
+			justify="left",
+			width=275,
+			font=("Arial", 18),
+			selectbackground=SELECTED_LOGIN,
+			selectforeground=LOGIN,
+			insertbackground="white"
+
+			)
+
+
+		self.password_var.set(" Password")
+		self.login_var.set(" login")
+
+		setup_up_label.pack()
+		login_frame.pack()
+		login_entry.place(anchor="w",rely=0.3,height=35)
+		password_entry.place(anchor="w", rely=0.8, height=35)
+		tfa_frame.pack()
+		# self.tfa_entry.place(anchor="w", rely=0.55, height=30,)
+		# self.tfa_up_label.place(anchor="n",relx=0.5, rely=0.1)
+
+		self.setup_account_btn.place(anchor="s",rely=0.97, relx=0.5, height=40, width=260)
+
+def add_account():
+	log.debug("starting client first")
+	client = SteamClient()
+	log.debug("first login first")
+	client.login(setup_login, setup_password)
+	if not client.logged_on:
+		log.debug("w/o tfa failed")
+		setup.setup_account_btn.configure(command=add_account_tfa)
+		setup.tfa_entry.place(anchor="w", rely=0.55, height=30,)
+		setup.tfa_up_label.place(anchor="n",relx=0.5, rely=0.1)
+	else:
+		setup_new_account(client)
+
+def add_account_tfa():
+	log.debug("starting client w tfa")
+	client = SteamClient()
+	log.debug("login w tfa")
+	client.login(setup_login, setup_password, two_factor_code=setup_tfa)
+	if not client.logged_on:
+		show_error("error with account")
+	else:
+		setup_new_account(client)
+
+
+def setup_new_account(client):
+	auth = SteamAuthenticator(backend=client)
+	print("logged in")
+
 
 def open_setup():
+	global setup
 	setup = Setup_account(root)
 	setup.grab_set()
 
@@ -126,11 +285,10 @@ POSH = H-(SIZEH//2)
 
 #main window configuration
 root.geometry(f"{SIZEW}x{SIZEH}-{POSW}-{POSH}")
-root.overrideredirect(False)
 root.resizable(False, False)
 root.attributes(
-	'-topmost', 1,
-	'-alpha',ALPHA,)
+	# '-topmost', 1,
+	'-alpha', ALPHA,)
 root.configure(bg=OUTLINE_BG)
 root.title("Desktop Authenticator")
 
@@ -350,10 +508,6 @@ if debug_mode:
 	last_update = int(time.time()) - debug_offset
 
 
-
-
-
-
 # custom mainloop
 def updater():
 	global last_update
@@ -374,15 +528,16 @@ def updater():
 	pass
 		
 
-	
-
-
 progresstime = time.time() - last_update
 progress = progresstime // 0.3
 
 get_tfa_list(secrets_list)
 log.debug("Updating userlist")
 user_list = update_user_list(secrets_list)
+setup = False
+setup_login = "None"
+setup_password = "None"
+setup_tfa = "None"
 acc_combo.configure(values=user_list)
 acc_var.set(user_list[0])
 
@@ -391,10 +546,18 @@ loop.do_run = True
 loop.updating = False
 loop.start()
 
-
 while True:
 	progresstime = time.time() - last_update
 	progress = progresstime // 0.3
+
+	if getattr(setup, "is_up", False):
+		setup_login = setup.login_var.get()
+		setup_password = setup.password_var.get()
+		setup_tfa = setup.tfa_var.get()	
+	else:
+		setup_login = "None"
+		setup_password = "None"
+		setup_tfa = "None"
 
 	if not loop.updating:
 		code = get_code_by_username(acc_var, tfa_list, user_list)

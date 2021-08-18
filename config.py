@@ -3,7 +3,7 @@ logging.basicConfig(level=logging.INFO) # , filename="log.txt"
 log = logging.getLogger("mainlog")
 
 debug_mode = False
-debug_sleep_time = 0.5
+debug_sleep_time = 0.0
 debug_offset = 25
 
 
@@ -41,6 +41,13 @@ EXITBTN="black"
 EXITBTN_BG="firebrick1"
 EXTBTN_ACT="black"
 EXTBTN_ACT_BG="tomato"
+LOGIN_BG = "dodgerblue4"
+LOGIN = "skyblue1"
+SELECTED_LOGIN = "steelblue1"
+SETUP_BTN_BG = "dodgerblue"
+SETUP_BTN = "white"
+SETUP_BTN_ACTIVE_BG = "lightSkyBlue"
+SETUP_BTN_ACTIVE = "black"
 
 # sizes and outlines
 SIZEW = 300

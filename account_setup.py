@@ -20,6 +20,5 @@ def logggin(username_asd, password_asd):
 		while not client.logged_on:
 			code = input("Enter moblile 2FA code: ")
 			client.login(username_asd, password_asd, two_factor_code=code)
-			if client.logged_on:
-				break
-			print("Wrong 2FA code")
+	auth = SteamAuthenticator(backend=client)
+
