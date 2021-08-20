@@ -5,7 +5,7 @@ from config import *
 log.debug("Importing SteamClient")
 from steam.client import SteamClient
 log.debug("Importing SteamAuthenticator")
-from steam.guard import SteamAuthenticator
+from steam.guard import SteamAuthenticator, SteamAuthenticatorError
 log.debug("Importing other libraries")
 import json
 from pyperclip import copy
@@ -18,6 +18,7 @@ import time
 import threading
 from win10toast import ToastNotifier
 from random import randint
+
 root = tk.Tk()
 
 if debug_mode:
@@ -296,7 +297,12 @@ def setup_new_account(client):
 		new_auth = "debug"
 		return
 	new_auth = SteamAuthenticator(backend=client)
-	new_auth.add()
+	try:
+		new_auth.add()
+	except SteamAuthenticatorError:
+		show_error("TFA already exists")
+		addacc.destroy()
+		return
 	print(new_auth.secrets)
 	new_secrets = new_auth.secrets
 
