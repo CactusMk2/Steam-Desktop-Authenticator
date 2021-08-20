@@ -16,6 +16,8 @@ last_update = 0
 user_list = ["----"]
 UNKNOWN_USER = "#UNKNOWN_USER"
 INTERVAL = 1
+new_auth = None
+new_secrets = None
 
 # colors
 OUTLINE_BG = "slate gray"
@@ -48,6 +50,10 @@ SETUP_BTN_BG = "dodgerblue"
 SETUP_BTN = "white"
 SETUP_BTN_ACTIVE_BG = "lightSkyBlue"
 SETUP_BTN_ACTIVE = "black"
+SMSLABEL = "white"
+
+OK_BTN_ACTIVE_BG = "gray"
+OK_BTN_ACTIVE = "black"
 
 # sizes and outlines
 SIZEW = 300

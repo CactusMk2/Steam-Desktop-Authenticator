@@ -1,3 +1,6 @@
+# lethal_industrie15@hotmail.com
+# tussca007
+
 from config import *
 log.debug("Importing SteamClient")
 from steam.client import SteamClient
@@ -20,6 +23,7 @@ root = tk.Tk()
 if debug_mode:
 	log.info("Engaged debug mode!")
 
+
 #custom progress bar as a frame
 class Custombar(tk.Frame):
 	start_pos = 0
@@ -39,6 +43,7 @@ class Custombar(tk.Frame):
 
 		self.width = progress * self.one_percent
 		self.configure(width=self.width)
+
 
 
 class Setup_account(tk.Toplevel):
@@ -69,8 +74,7 @@ class Setup_account(tk.Toplevel):
 			self,
 			relief=tk.FLAT,
 			bg=MAINFRAME_BG)
-		setup_mainframe.place(relx=MF_LOC, rely=MF_LOC, relwidth=0.98, relheight=0.98
-			)
+		setup_mainframe.place(relx=MF_LOC, rely=MF_LOC, relwidth=0.98, relheight=0.98)
 
 		login_frame = tk.Frame(
 			setup_mainframe,
@@ -176,39 +180,149 @@ class Setup_account(tk.Toplevel):
 
 		self.setup_account_btn.place(anchor="s",rely=0.97, relx=0.5, height=40, width=260)
 
+
+
+class Add_account(tk.Toplevel):
+
+	def on_closing(self):
+			self.is_up = False
+			self.destroy()
+	smscode_entry_var = None
+	is_up = True	
+
+	def __init__(self, parent):
+		
+
+		super().__init__(parent)
+		self.geometry(f"{SIZEW}x{SIZEH}-{POSW-SIZEW}-{POSH}")
+		self.resizable(False, False)
+		self.attributes(
+			# '-topmost', 1,
+			'-alpha', ALPHA,
+			'-toolwindow', True)
+		self.configure(bg=OUTLINE_BG)
+		self.protocol("WM_DELETE_WINDOW", self.on_closing)
+		self.is_up = True
+
+		add_account_mainframe = tk.Frame(
+			self,
+			relief=tk.FLAT,
+			bg=MAINFRAME_BG)
+		add_account_mainframe.place(relx=MF_LOC, rely=MF_LOC, relwidth=0.98, relheight=0.98)
+
+		up_smslabel = tk.Label(
+			add_account_mainframe,
+			text="Enter SMS code\nyou just received",
+			bg=MAINFRAME_BG,
+			fg=SMSLABEL,
+			font=("Arial", 24))
+
+		self.smscode_entry_var = tk.StringVar()
+		smscode_entry = tk.Entry(
+			add_account_mainframe,
+			textvariable=self.smscode_entry_var,
+			bg=SMSLABEL,
+			fg="black",
+			justify="center",
+			width=200,
+			font=("Arial", 22),
+			selectbackground="black",
+			selectforeground=SMSLABEL
+			)
+
+		ok_btn = tk.Button(
+			add_account_mainframe,
+			text="OK",
+			bg=SMSLABEL,
+			fg="black",
+			activebackground=OK_BTN_ACTIVE_BG,
+			activeforeground=OK_BTN_ACTIVE,
+			font=("Arial", 24),
+			command=finalize_new_account
+			)
+
+		up_smslabel.place(anchor="center", relx=0.5, rely=0.3)
+		smscode_entry.place(anchor="center", relx=0.5, rely=0.55, width=200)
+		ok_btn.place(anchor="center", relx=0.5, rely=0.75, width=100, height=40)
+
+
+
 def add_account():
-	log.debug("starting client first")
-	client = SteamClient()
-	log.debug("first login first")
-	client.login(setup_login, setup_password)
-	if not client.logged_on:
+	if debug_mode:
+		result = 85
+	else:
+		log.debug("starting client first")
+		client = SteamClient()
+		log.debug("first login first")
+		result = client.login(setup_login, setup_password).value
+	if result == 5:
+		show_error("Invalid password")
+		return
+	elif result == 85:
 		log.debug("w/o tfa failed")
 		setup.setup_account_btn.configure(command=add_account_tfa)
 		setup.tfa_entry.place(anchor="w", rely=0.55, height=30,)
 		setup.tfa_up_label.place(anchor="n",relx=0.5, rely=0.1)
 	else:
+		setup.destroy()
 		setup_new_account(client)
 
 def add_account_tfa():
+	if debug_mode:
+		setup.destroy()
+		setup_new_account("lol")
+		return
+
 	log.debug("starting client w tfa")
 	client = SteamClient()
 	log.debug("login w tfa")
-	client.login(setup_login, setup_password, two_factor_code=setup_tfa)
-	if not client.logged_on:
-		show_error("error with account")
+	result = client.login(setup_login, setup_password, two_factor_code=setup_tfa).value
+	if result == 88:
+		show_error("wrong tfa")
+	elif result == 5:
+		show_error("Invalid password")
+		return
 	else:
+		setup.destroy()
 		setup_new_account(client)
 
 
 def setup_new_account(client):
-	auth = SteamAuthenticator(backend=client)
-	print("logged in")
+	global new_auth
+	global new_secrets
+	open_addacc()
+	if debug_mode:
+		print("logged in")
+		new_auth = "debug"
+		return
+	new_auth = SteamAuthenticator(backend=client)
+	new_auth.add()
+	print(new_auth.secrets)
+	new_secrets = new_auth.secrets
+
+def finalize_new_account():
+	if new_auth == "debug":
+		print("finalized")
+		return
+	if add_smscode == "":
+		show_error("input sms code")
+	answer = new_auth.finalize(add_smscode)
+	print(answer)
+	username = new_secrets.get("account_name",UNKNOWN_USER)
+	with open(SECRETS_FOLDER+username+".json", "w") as f:
+		json.dump(new_secrets, f)
+	addacc.destroy()
 
 
 def open_setup():
 	global setup
 	setup = Setup_account(root)
 	setup.grab_set()
+
+def open_addacc():
+	global addacc
+	addacc = Add_account(root)
+	addacc.grab_set()
 
 
 #guard functions
@@ -271,6 +385,9 @@ def get_tfa_list(secrets_list):
 		code = get_code(secrets)
 		tfa_list.append(code)
 
+def on_root_closing():
+	root.destroy()
+	exit()
 
 def copy_code():
 	global code
@@ -291,6 +408,8 @@ root.attributes(
 	'-alpha', ALPHA,)
 root.configure(bg=OUTLINE_BG)
 root.title("Desktop Authenticator")
+root.protocol("WM_DELETE_WINDOW", on_root_closing)
+
 
 
 # creating frames
@@ -458,27 +577,32 @@ root.update()
 # first time initializing guard
 
 #getting all secrets
-if not os.path.isdir(SECRETS_FOLDER):
-	SECRETS_FOLDER = "./"
-index = 0
-log.debug("looking for secrets, getting files")
-for _, dirs, files in os.walk(SECRETS_FOLDER):
-	for file in files:
-		log.debug(f"FILE - {file}")
-		with open(SECRETS_FOLDER+file,"r") as f:
-			try:
-				secrets = json.loads(f.read())
-			except:
-				pass
-			else:
-				if secrets.get("shared_secret", False):
-					secrets_list.append(secrets)
+def get_all_secrets():
+	global secrets_list
+	global SECRETS_FOLDER
+	secrets_list = []
+	if not os.path.isdir(SECRETS_FOLDER):
+		SECRETS_FOLDER = "./"
+	index = 0
+	log.debug("looking for secrets, getting files")
+	for _, dirs, files in os.walk(SECRETS_FOLDER):
+		for file in files:
+			log.debug(f"FILE - {file}")
+			with open(SECRETS_FOLDER+file,"r") as f:
+				try:
+					secrets = json.loads(f.read())
+				except:
+					pass
 				else:
-					user = secrets.get("account_name", False)
-					if user:
-						show_error(f"Secrets file for {user} is corrupted: no shared_secret key")
-				
-	break
+					if secrets.get("shared_secret", False):
+						secrets_list.append(secrets)
+					else:
+						user = secrets.get("account_name", False)
+						if user:
+							show_error(f"Secrets file for {user} is corrupted: no shared_secret key")
+		break
+get_all_secrets()
+
 if not len(secrets_list):
 	code_entry.configure(fg=CODELABEL_CRIT)
 	code_var.set("ERROR")
@@ -513,10 +637,13 @@ def updater():
 	global last_update
 	global progress
 	global progresstime
+	global user_list
 	while getattr(loop, "do_run", True):
 		loop_now = int(time.time())
 		if not (loop_now + 1) - last_update > 30:
 			time.sleep(1)
+		get_all_secrets()
+		user_list = update_user_list(secrets_list)
 
 		if progresstime > 29:
 			loop.updating = True
@@ -535,9 +662,11 @@ get_tfa_list(secrets_list)
 log.debug("Updating userlist")
 user_list = update_user_list(secrets_list)
 setup = False
+addacc = False
 setup_login = "None"
 setup_password = "None"
 setup_tfa = "None"
+add_smscode = "None"
 acc_combo.configure(values=user_list)
 acc_var.set(user_list[0])
 
@@ -547,6 +676,7 @@ loop.updating = False
 loop.start()
 
 while True:
+	acc_combo.configure(values=user_list)
 	progresstime = time.time() - last_update
 	progress = progresstime // 0.3
 
@@ -558,6 +688,13 @@ while True:
 		setup_login = "None"
 		setup_password = "None"
 		setup_tfa = "None"
+
+	if getattr(addacc, "is_up", False):
+		add_smscode = addacc.smscode_entry_var.get()
+	else:
+		add_smscode = "None"
+	# print(add_smscode)
+	
 
 	if not loop.updating:
 		code = get_code_by_username(acc_var, tfa_list, user_list)
