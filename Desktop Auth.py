@@ -1,9 +1,4 @@
 from config import *
-log.debug("Importing SteamClient")
-from steam.client import SteamClient
-log.debug("Importing SteamAuthenticator")
-from steam.guard import SteamAuthenticator, SteamAuthenticatorError
-log.debug("Importing other libraries")
 import json
 from pyperclip import copy
 import os
@@ -167,8 +162,8 @@ class Setup_account(tk.Toplevel):
 			)
 
 
-		self.password_var.set("tussca007")
-		self.login_var.set("lethal_industrie15@hotmail.com")
+		self.password_var.set(" Login")
+		self.login_var.set("Password")
 
 		setup_up_label.pack()
 		login_frame.pack()
@@ -272,7 +267,6 @@ def add_account():
 		show_error("some error")
 		return
 	else:
-		setup.destroy()
 		setup_new_account(client)
 
 def add_account_tfa():
@@ -284,9 +278,6 @@ def add_account_tfa():
 	log.debug("starting client w tfa")
 	client = SteamClient()
 	log.debug("login w tfa")
-	print(setup_login)
-	print(setup_password)
-	print(setup_tfa)
 	if tfa_type_new == 85:
 		result = client.login(setup_login, setup_password, two_factor_code=setup_tfa).value
 	elif tfa_type_new == 63:
@@ -303,11 +294,13 @@ def add_account_tfa():
 	elif result == 84:
 		show_error("try again later")
 		return
+	elif result == 85:
+		show_error("enter tfa")
+		return
 	elif not client.logged_on:
 		show_error("some error")
 		return
 	else:
-		setup.destroy()
 		setup_new_account(client)
 
 
@@ -315,6 +308,7 @@ def setup_new_account(client):
 	global new_auth
 	global new_secrets
 	open_addacc()
+	setup.destroy()
 	if debug_mode:
 		print("logged in")
 		new_auth = "debug"
@@ -673,6 +667,12 @@ def get_last_update():
 			work = False
 			break
 
+log.debug("Importing SteamClient")
+from steam.client import SteamClient
+log.debug("Importing SteamAuthenticator")
+from steam.guard import SteamAuthenticator, SteamAuthenticatorError
+log.debug("Importing other libraries")
+
 setup = False
 addacc = False
 get_all_secrets()
@@ -732,8 +732,6 @@ progress = progresstime // 0.3
 get_tfa_list(secrets_list)
 log.debug("Updating userlist")
 user_list = update_user_list(secrets_list)
-setup = False
-addacc = False
 setup_login = "None"
 setup_password = "None"
 setup_tfa = "None"
