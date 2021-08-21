@@ -1,6 +1,3 @@
-# lethal_industrie15@hotmail.com
-# tussca007
-
 from config import *
 log.debug("Importing SteamClient")
 from steam.client import SteamClient
@@ -18,6 +15,7 @@ import time
 import threading
 from win10toast import ToastNotifier
 from random import randint
+from pathlib import Path
 
 root = tk.Tk()
 
@@ -127,7 +125,8 @@ class Setup_account(tk.Toplevel):
 			width=275,
 			font=("Impact", 20),
 			selectbackground=SELECTED_LOGIN,
-			selectforeground=LOGIN
+			selectforeground=LOGIN,
+			show="*"
 			)
 
 
@@ -168,8 +167,8 @@ class Setup_account(tk.Toplevel):
 			)
 
 
-		self.password_var.set(" Password")
-		self.login_var.set(" login")
+		self.password_var.set("tussca007")
+		self.login_var.set("lethal_industrie15@hotmail.com")
 
 		setup_up_label.pack()
 		login_frame.pack()
@@ -249,6 +248,7 @@ class Add_account(tk.Toplevel):
 
 
 def add_account():
+	global tfa_type_new
 	if debug_mode:
 		result = 85
 	else:
@@ -259,11 +259,18 @@ def add_account():
 	if result == 5:
 		show_error("Invalid password")
 		return
-	elif result == 85:
+	elif result == 84:
+		show_error("try again later")
+		return
+	elif result == 85 or result == 63:
+		tfa_type_new = result
 		log.debug("w/o tfa failed")
 		setup.setup_account_btn.configure(command=add_account_tfa)
 		setup.tfa_entry.place(anchor="w", rely=0.55, height=30,)
 		setup.tfa_up_label.place(anchor="n",relx=0.5, rely=0.1)
+	elif not client.logged_on:
+		show_error("some error")
+		return
 	else:
 		setup.destroy()
 		setup_new_account(client)
@@ -277,11 +284,27 @@ def add_account_tfa():
 	log.debug("starting client w tfa")
 	client = SteamClient()
 	log.debug("login w tfa")
-	result = client.login(setup_login, setup_password, two_factor_code=setup_tfa).value
+	print(setup_login)
+	print(setup_password)
+	print(setup_tfa)
+	if tfa_type_new == 85:
+		result = client.login(setup_login, setup_password, two_factor_code=setup_tfa).value
+	elif tfa_type_new == 63:
+		result = client.login(setup_login, setup_password, auth_code=setup_tfa).value
+	else:
+		show_error("wrong tfa type")
+		return
+	print(result)
 	if result == 88:
 		show_error("wrong tfa")
 	elif result == 5:
 		show_error("Invalid password")
+		return
+	elif result == 84:
+		show_error("try again later")
+		return
+	elif not client.logged_on:
+		show_error("some error")
 		return
 	else:
 		setup.destroy()
@@ -303,12 +326,24 @@ def setup_new_account(client):
 		show_error("TFA already exists")
 		addacc.destroy()
 		return
+	except:
+		show_error("some error")
+		addacc.destroy()
+		return
 	print(new_auth.secrets)
 	new_secrets = new_auth.secrets
 
 def finalize_new_account():
+	Path(SECRETS_FOLDER).mkdir(parents=True, exist_ok=True)
 	if new_auth == "debug":
 		print("finalized")
+		username = "debug"
+		with open(SECRETS_FOLDER+username+".json", "w") as f:
+			json.dump({"shared_secret":"debug", "account_name":"debug"}, f)
+		get_all_secrets()
+		user_list = update_user_list(secrets_list)
+		get_last_update()
+		addacc.destroy()
 		return
 	if add_smscode == "":
 		show_error("input sms code")
@@ -317,6 +352,9 @@ def finalize_new_account():
 	username = new_secrets.get("account_name",UNKNOWN_USER)
 	with open(SECRETS_FOLDER+username+".json", "w") as f:
 		json.dump(new_secrets, f)
+	get_all_secrets()
+	user_list = update_user_list(secrets_list)
+	get_last_update()
 	addacc.destroy()
 
 
@@ -588,7 +626,7 @@ def get_all_secrets():
 	global SECRETS_FOLDER
 	secrets_list = []
 	if not os.path.isdir(SECRETS_FOLDER):
-		SECRETS_FOLDER = "./"
+		return
 	index = 0
 	log.debug("looking for secrets, getting files")
 	for _, dirs, files in os.walk(SECRETS_FOLDER):
@@ -607,35 +645,63 @@ def get_all_secrets():
 						if user:
 							show_error(f"Secrets file for {user} is corrupted: no shared_secret key")
 		break
-get_all_secrets()
 
-if not len(secrets_list):
-	code_entry.configure(fg=CODELABEL_CRIT)
-	code_var.set("ERROR")
-	progressbar.configure(bg=PROGRESSBAR_CRT_BG)
-	root.update()
-	exit_with_error("No secrets files found")
 
-#getting when was last update
-log.debug("looking for last update")
-tempcode = get_code(secrets_list[0])
-work = True
-while work:
-	for i in range(1,30):
-		# tempauth.steam_time_offset = i
-		if tempcode != get_code(secrets_list[0], offset=i):
-			offset = 30 - (i+1)
-			last_update = int(time.time()) - offset
+def get_last_update():
+	global last_update
+	if debug_mode:
+		last_update = int(time.time()) - debug_offset
+		return
+	code_entry.configure(fg=CODELABEL_UPD)
+	code_var.set("Updating")
+	progressbar.configure(bg=PROGRESSBAR_UPD_BG)
+	#getting when was last update
+	log.debug("looking for last update")
+	tempcode = get_code(secrets_list[0])
+	work = True
+	while work:
+		for i in range(1,30):
+			# tempauth.steam_time_offset = i
+			if tempcode != get_code(secrets_list[0], offset=i):
+				offset = 30 - (i+1)
+				last_update = int(time.time()) - offset
+				work = False
+				break
+		else:
+			log.info("Exit")
+			last_update = int(time.time())
 			work = False
 			break
-	else:
-		log.info("Exit")
-		last_update = int(time.time())
-		work = False
-		break
 
-if debug_mode:
-	last_update = int(time.time()) - debug_offset
+setup = False
+addacc = False
+get_all_secrets()
+while True:
+	if not len(secrets_list):
+		root.update()
+		acc_combo.configure(values="-----")
+		acc_combo.current(0)
+		code_entry.configure(fg=CODELABEL_WARN)
+		code_var.set("-----")
+		progressbar.configure(bg=PROGRESSBAR_WARN_BG)
+
+		if getattr(setup, "is_up", False):
+			setup_login = setup.login_var.get()
+			setup_password = setup.password_var.get()
+			setup_tfa = setup.tfa_var.get()	
+		else:
+			setup_login = "None"
+			setup_password = "None"
+			setup_tfa = "None"
+
+		if getattr(addacc, "is_up", False):
+			add_smscode = addacc.smscode_entry_var.get()
+		else:
+			add_smscode = "None"
+		get_all_secrets()
+	else:
+		get_last_update()
+		break	
 
 
 # custom mainloop
@@ -648,8 +714,7 @@ def updater():
 		loop_now = int(time.time())
 		if not (loop_now + 1) - last_update > 30:
 			time.sleep(1)
-		get_all_secrets()
-		user_list = update_user_list(secrets_list)
+		
 
 		if progresstime > 29:
 			loop.updating = True
@@ -734,5 +799,3 @@ while True:
 		loop.do_run = False
 		exit()
 		
-		
-
