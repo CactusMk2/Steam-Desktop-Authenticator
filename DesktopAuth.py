@@ -1,5 +1,5 @@
 from config import *
-log.debug("Importing other libraries")
+log.debug("Starting app")
 import json
 from pyperclip import copy
 from tkinter import ttk
@@ -28,7 +28,7 @@ def add_account():
 		show_error("Invalid password")
 		return
 	elif result == 84:
-		show_error("try again later")
+		show_error("Try again later")
 		return
 	elif result == 85 or result == 63:
 		tfa_type_new = result
@@ -37,7 +37,7 @@ def add_account():
 		setup.tfa_entry.place(anchor="w", rely=0.55, height=30,)
 		setup.tfa_up_label.place(anchor="n",relx=0.5, rely=0.1)
 	elif not client.logged_on:
-		show_error("some error w/o tfa")
+		show_error("Unknown error at first login")
 		return
 	else:
 		setup_new_account(client)
@@ -57,22 +57,22 @@ def add_account_tfa():
 		log.info("logging with email")
 		result = client.login(setup_login, setup_password, auth_code=setup_tfa).value
 	else:
-		show_error("wrong tfa type")
+		show_error("Wrong tfa type")
 		return
 	print(result)
 	if result == 88:
-		show_error("wrong tfa")
+		show_error("Wrong tfa")
 	elif result == 5:
 		show_error("Invalid password")
 		return
 	elif result == 84:
-		show_error("try again later")
+		show_error("Try again later")
 		return
 	elif result == 85:
-		show_error("enter tfa")
+		show_error("Enter tfa")
 		return
 	elif not client.logged_on:
-		show_error("some error")
+		show_error("Some error")
 		return
 	else:
 		setup_new_account(client)
@@ -82,7 +82,7 @@ def setup_new_account(client):
 	global new_auth
 	global new_secrets
 	if not client.logged_on:
-		show_error("client not logged on while setup")
+		show_error("Client not logged on while setup")
 		return
 	open_addacc()
 	setup.destroy()
@@ -99,7 +99,7 @@ def setup_new_account(client):
 		addacc.destroy()
 		return
 	except:
-		show_error("some error")
+		show_error("Unknown error error")
 		addacc.destroy()
 		return
 	print(new_auth.secrets)
@@ -119,12 +119,12 @@ def finalize_new_account():
 		addacc.destroy()
 		return
 	if add_smscode == "":
-		show_error("input sms code")
+		show_error("Input sms code")
 		return
 	try:
 		new_auth.finalize(add_smscode)
 	except:
-		show_error("error while finalizing")
+		show_error("Error while finalizing")
 		return
 	username = new_secrets.get("account_name",UNKNOWN_USER)
 	with open(SECRETS_FOLDER+username+".json", "w") as f:

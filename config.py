@@ -1,5 +1,5 @@
 import logging
-logging.basicConfig(level=logging.INFO) # , filename="log.txt"
+logging.basicConfig(level=logging.INFO, filename="log.txt")
 log = logging.getLogger("mainlog")
 
 debug_mode = False
