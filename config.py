@@ -19,6 +19,10 @@ UNKNOWN_USER = "#UNKNOWN_USER"
 INTERVAL = 1
 new_auth = None
 new_secrets = None
+setup_login = "None"
+setup_password = "None"
+setup_tfa = "None"
+add_smscode = "None"
 
 # colors
 OUTLINE_BG = "slate gray"
