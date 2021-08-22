@@ -211,7 +211,7 @@ def get_last_update():
 			break
 
 log.info("rendering main window")
-root = tk.Tk()
+
 
 # sizes
 W = root.winfo_screenwidth() // 2
@@ -234,104 +234,6 @@ def on_root_closing():
 root.protocol("WM_DELETE_WINDOW", on_root_closing)
 
 
-
-# creating frames
-mainframe = tk.Frame(
-	root,
-	relief=tk.FLAT,
-	bg=MAINFRAME_BG)
-mainframe.place(relx=MF_LOC, rely=MF_LOC, relwidth=0.98, relheight=0.98)
-
-uplabel_frame = tk.Frame(
-	mainframe,
-	relief=tk.FLAT,
-	width=300,
-	bg=MAINFRAME_BG,
-	height=45
-	)
-
-progressbar_frame = tk.Frame(
-	mainframe,
-	relief=tk.FLAT,
-	width=260,
-	height=22,
-	bg=MAINFRAME_BG,
-	)
-
-copy_btn_frame = tk.Frame(
-	mainframe,
-	relief=tk.FLAT,
-	width=240,
-	height=43,
-	bg="white")
-
-acc_frame = tk.Frame(
-	mainframe,
-	relief=tk.FLAT,
-	width=240,
-	height=43,
-	bg=MAINFRAME_BG)
-
-setup_frame = tk.Frame(
-	mainframe,
-	relief=tk.FLAT,
-	width=240,
-	height=43,
-	bg="white"
-	)
-
-
-# creating widgets
-up_label = tk.Label(
-	uplabel_frame,
-	text="Steam Guard Authenticator",
-	bg=MAINFRAME_BG,
-	fg=UPLABEL,
-	height=1,
-	font=("Arial", 16),)
-
-code_var = tk.StringVar()
-code_var.set("Loading")
-
-code_entry = tk.Entry(
-	mainframe,
-	readonlybackground=CODEFRAME_BG,
-	relief=tk.FLAT,
-	textvariable=code_var,
-	bg=CODEFRAME_BG,
-	fg=CODELABEL,
-	justify=tk.CENTER,
-	width=260,
-	font=("Impact", 50),
-	selectbackground=SELECTED_CODE,
-	selectforeground=CODELABEL
-	)
-code_entry.configure(state="readonly")
-
-
-acc_lbl = tk.Label(
-	acc_frame,
-	text="Account:",
-	bg=MAINFRAME_BG,
-	fg=ACC_LBL,
-	font=("Arial", 14))
-
-acc_var = tk.StringVar()
-acc_combo = ttk.Combobox(
-	acc_frame,
-	textvariable=acc_var,
-	state="readonly")
-
-acc_combo.configure(values="Loading")
-acc_combo.current(0)
-
-
-progressbar = Custombar(
-	progressbar_frame,
-	relief=tk.FLAT,
-	width=260,
-	bg=PROGRESSBAR_BG,)
-
 copy_btn = tk.Button(
 	copy_btn_frame,
 	relief=tk.FLAT,
@@ -345,17 +247,6 @@ copy_btn = tk.Button(
 	font=("Impact", 32),
 	command=copy_code)
 
-exit_btn = tk.Button(
-	mainframe,
-	relief=tk.FLAT,
-	text=u"\u274C",
-	width=300,
-	height=10,
-	bg=EXITBTN_BG,
-	fg=EXITBTN,
-	activebackground=EXTBTN_ACT_BG,
-	activeforeground=EXTBTN_ACT,
-	command=root.destroy)
 
 setup_btn = tk.Button(
 	setup_frame,

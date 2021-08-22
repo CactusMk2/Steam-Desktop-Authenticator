@@ -1,5 +1,7 @@
 import tkinter as tk
 from config import *
+from tkinter import ttk
+
 #custom progress bar as a frame
 class Custombar(tk.Frame):
 	start_pos = 0
@@ -105,6 +107,13 @@ class Setup_account(tk.Toplevel):
 			show="*"
 			)
 
+		self.tfa_up_label = tk.Label(
+			tfa_frame,
+			text="Enter 2FA or email code",
+			bg=MAINFRAME_BG,
+			fg=UPLABEL,
+			font=("Arial", 16)
+			)
 
 		self.setup_account_btn = tk.Button(
 			setup_mainframe,
@@ -115,14 +124,6 @@ class Setup_account(tk.Toplevel):
 			activebackground=SETUP_BTN_ACTIVE_BG,
 			activeforeground=SETUP_BTN_ACTIVE,
 			font = ("Impact", 22),
-			)
-
-		self.tfa_up_label = tk.Label(
-			tfa_frame,
-			text="Enter 2FA or email code",
-			bg=MAINFRAME_BG,
-			fg=UPLABEL,
-			font=("Arial", 16)
 			)
 
 		self.tfa_var = tk.StringVar()
@@ -216,3 +217,116 @@ class Add_account(tk.Toplevel):
 		up_smslabel.place(anchor="center", relx=0.5, rely=0.3)
 		smscode_entry.place(anchor="center", relx=0.5, rely=0.55, width=200)
 		self.ok_btn.place(anchor="center", relx=0.5, rely=0.75, width=100, height=40)
+
+root = tk.Tk()
+
+# creating frames
+mainframe = tk.Frame(
+	root,
+	relief=tk.FLAT,
+	bg=MAINFRAME_BG)
+mainframe.place(relx=MF_LOC, rely=MF_LOC, relwidth=0.98, relheight=0.98)
+
+uplabel_frame = tk.Frame(
+	mainframe,
+	relief=tk.FLAT,
+	width=300,
+	bg=MAINFRAME_BG,
+	height=45
+	)
+
+progressbar_frame = tk.Frame(
+	mainframe,
+	relief=tk.FLAT,
+	width=260,
+	height=22,
+	bg=MAINFRAME_BG,
+	)
+
+copy_btn_frame = tk.Frame(
+	mainframe,
+	relief=tk.FLAT,
+	width=240,
+	height=43,
+	bg="white")
+
+acc_frame = tk.Frame(
+	mainframe,
+	relief=tk.FLAT,
+	width=240,
+	height=43,
+	bg=MAINFRAME_BG)
+
+setup_frame = tk.Frame(
+	mainframe,
+	relief=tk.FLAT,
+	width=240,
+	height=43,
+	bg="white"
+	)
+
+
+# creating widgets
+up_label = tk.Label(
+	uplabel_frame,
+	text="Steam Guard Authenticator",
+	bg=MAINFRAME_BG,
+	fg=UPLABEL,
+	height=1,
+	font=("Arial", 16),)
+
+code_var = tk.StringVar()
+code_var.set("Loading")
+
+code_entry = tk.Entry(
+	mainframe,
+	readonlybackground=CODEFRAME_BG,
+	relief=tk.FLAT,
+	textvariable=code_var,
+	bg=CODEFRAME_BG,
+	fg=CODELABEL,
+	justify=tk.CENTER,
+	width=260,
+	font=("Impact", 50),
+	selectbackground=SELECTED_CODE,
+	selectforeground=CODELABEL
+	)
+code_entry.configure(state="readonly")
+
+
+acc_lbl = tk.Label(
+	acc_frame,
+	text="Account:",
+	bg=MAINFRAME_BG,
+	fg=ACC_LBL,
+	font=("Arial", 14))
+
+acc_var = tk.StringVar()
+acc_combo = ttk.Combobox(
+	acc_frame,
+	textvariable=acc_var,
+	state="readonly")
+
+acc_combo.configure(values="Loading")
+acc_combo.current(0)
+
+
+progressbar = Custombar(
+	progressbar_frame,
+	relief=tk.FLAT,
+	width=260,
+	bg=PROGRESSBAR_BG,)
+
+
+exit_btn = tk.Button(
+	mainframe,
+	relief=tk.FLAT,
+	text=u"\u274C",
+	width=300,
+	height=10,
+	bg=EXITBTN_BG,
+	fg=EXITBTN,
+	activebackground=EXTBTN_ACT_BG,
+	activeforeground=EXTBTN_ACT,
+	command=root.destroy)
+
